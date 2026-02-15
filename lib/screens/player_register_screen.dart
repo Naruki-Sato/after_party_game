@@ -59,8 +59,7 @@ class _PlayerRegisterScreenState extends State<PlayerRegisterScreen> {
     });
   }
 
-  Future<void> _selectPlayer(Map<String, dynamic> player) async {
-    // すでに接続されているかチェック
+Future<void> _selectPlayer(Map<String, dynamic> player) async {
     if (player['connected'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -75,11 +74,9 @@ class _PlayerRegisterScreenState extends State<PlayerRegisterScreen> {
       final ref = FirebaseDatabase.instance
           .ref('rooms/${widget.roomId}/players/${player['id']}');
       
-      // トランザクションを使って排他制御
       final snapshot = await ref.get();
       final currentData = Map<String, dynamic>.from(snapshot.value as Map);
       
-      // 再度チェック（他のプレイヤーが先に選択していないか）
       if (currentData['connected'] == true) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -92,11 +89,9 @@ class _PlayerRegisterScreenState extends State<PlayerRegisterScreen> {
         return;
       }
       
-      // 接続状態を更新
       await ref.update({'connected': true});
       
       if (mounted) {
-        // 待機画面へ遷移
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -108,6 +103,7 @@ class _PlayerRegisterScreenState extends State<PlayerRegisterScreen> {
         );
       }
     } catch (e) {
+      print('Select player error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('エラー: $e')),

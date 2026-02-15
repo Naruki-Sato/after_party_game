@@ -101,7 +101,7 @@ class _GameScreenPlayerState extends State<GameScreenPlayer> {
     });
   }
 
-  Future<void> _submitWord() async {
+Future<void> _submitWord() async {
     final word = _wordController.text.trim();
     if (word.isEmpty || _playerInfo == null || _roomData == null) return;
 
@@ -114,8 +114,20 @@ class _GameScreenPlayerState extends State<GameScreenPlayer> {
     }
 
     try {
-      final teamId = _playerInfo!['team'];
-      final teamIdStr = '$teamId';  // 文字列として扱う
+      // teamIdを確実に文字列化
+      var teamId = _playerInfo!['team'];
+      String teamIdStr;
+      
+      if (teamId is int) {
+        teamIdStr = teamId.toString();
+      } else if (teamId is String) {
+        teamIdStr = teamId;
+      } else {
+        teamIdStr = '0';
+      }
+      
+      print('Submitting word for team: $teamIdStr');
+      
       final teamRef = FirebaseDatabase.instance
           .ref('rooms/${widget.roomId}/teams/$teamIdStr');
       
@@ -172,6 +184,7 @@ class _GameScreenPlayerState extends State<GameScreenPlayer> {
         );
       }
     } catch (e) {
+      print('Submit word error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('エラー: $e')),
@@ -261,15 +274,28 @@ class _GameScreenPlayerState extends State<GameScreenPlayer> {
     );
   }
 
-  Widget _buildGameScreen() {
+ Widget _buildGameScreen() {
     if (_playerInfo == null || _roomData == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
     
-    final teamId = _playerInfo!['team'];
-    final teamIdStr = teamId.toString();
+    // teamIdを確実に文字列化
+    var teamId = _playerInfo!['team'];
+    String teamIdStr;
+    
+    if (teamId is int) {
+      teamIdStr = teamId.toString();
+    } else if (teamId is String) {
+      teamIdStr = teamId;
+    } else {
+      teamIdStr = '0';
+    }
+    
+    print('Player team ID: $teamId (type: ${teamId.runtimeType})');
+    print('Team ID string: $teamIdStr');
+    
     final teamsData = _roomData!['teams'];
     
     if (teamsData == null) {
@@ -278,10 +304,21 @@ class _GameScreenPlayerState extends State<GameScreenPlayer> {
       );
     }
     
+    print('Teams data keys: ${teamsData.keys}');
+    
     final teamDataRaw = teamsData[teamIdStr];
     if (teamDataRaw == null) {
-      return const Scaffold(
-        body: Center(child: Text('チームデータ読み込み中...')),
+      return Scaffold(
+        body: Container(
+          color: const Color(0xFF2c3e50),
+          child: Center(
+            child: Text(
+              'チームデータが見つかりません\nteamId: $teamIdStr\nteams keys: ${teamsData.keys}',
+              style: const TextStyle(color: Colors.white),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
       );
     }
     
@@ -293,11 +330,9 @@ class _GameScreenPlayerState extends State<GameScreenPlayer> {
           )
         : <Map<String, dynamic>>[];
     final height = teamData['height'] ?? 0;
-    final teamName = teamData['name'] ?? 'チーム${teamId + 1}';
+    final teamName = teamData['name'] ?? 'チーム${int.tryParse(teamIdStr) ?? 0 + 1}';
     final themeChar = _roomData!['theme']?['char'] ?? '';
-    final themeDetail = _roomData!['theme']?['detail'] ?? '';
-    
-    return Scaffold(
+    final themeDetail = _roomData!['theme']?['detail'] ?? '';    return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           color: Color(0xFF2c3e50),
