@@ -11,7 +11,7 @@ class GameService extends ChangeNotifier {
   Map<String, dynamic>? roomData;
   Map<String, dynamic>? savedRoomConfig;
 
-  Future<String> createRoom({
+Future<String> createRoom({
     required List<String> participants,
     required String theme,
     required String themeDetail,
@@ -34,10 +34,11 @@ class GameService extends ChangeNotifier {
       };
     }
 
-    // キーを文字列として明示的に設定
-    final teamsData = <String, dynamic>{};
+    // teamsを確実にMapとして保存
+    final teamsMap = <String, dynamic>{};
     for (var i = 0; i < numTeams; i++) {
-      teamsData['$i'] = {  // ← '$i' で文字列化
+      final key = i.toString();
+      teamsMap[key] = {
         'name': teamNames[i],
         'blocks': [],
         'height': 0,
@@ -48,7 +49,9 @@ class GameService extends ChangeNotifier {
     }
 
     final now = DateTime.now().millisecondsSinceEpoch;
-    final roomDataToSave = {
+    
+    // Firebaseに保存するデータ
+    final roomDataMap = <String, dynamic>{
       'roomId': newRoomId,
       'players': playersData,
       'theme': {
@@ -60,13 +63,14 @@ class GameService extends ChangeNotifier {
       'numTeams': numTeams,
       'teamNames': teamNames,
       'gameState': 'waiting',
-      'teams': teamsData,
+      'teams': teamsMap,  // Mapとして保存
       'createdAt': now,
       'expiresAt': now + (2 * 60 * 60 * 1000),
     };
 
-    print('Creating room with teams: ${teamsData.keys}');
-    await _database.child('rooms').child(newRoomId).set(roomDataToSave);
+    print('Saving room data with teams keys: ${teamsMap.keys}');
+    
+    await _database.child('rooms').child(newRoomId).set(roomDataMap);
     
     this.roomId = newRoomId;
     isHost = true;

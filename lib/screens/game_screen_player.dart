@@ -101,7 +101,7 @@ class _GameScreenPlayerState extends State<GameScreenPlayer> {
     });
   }
 
-Future<void> _submitWord() async {
+  Future<void> _submitWord() async {
     final word = _wordController.text.trim();
     if (word.isEmpty || _playerInfo == null || _roomData == null) return;
 
@@ -114,17 +114,8 @@ Future<void> _submitWord() async {
     }
 
     try {
-      // teamIdを確実に文字列化
       var teamId = _playerInfo!['team'];
-      String teamIdStr;
-      
-      if (teamId is int) {
-        teamIdStr = teamId.toString();
-      } else if (teamId is String) {
-        teamIdStr = teamId;
-      } else {
-        teamIdStr = '0';
-      }
+      String teamIdStr = teamId is int ? teamId.toString() : teamId.toString();
       
       print('Submitting word for team: $teamIdStr');
       
@@ -274,24 +265,15 @@ Future<void> _submitWord() async {
     );
   }
 
- Widget _buildGameScreen() {
+  Widget _buildGameScreen() {
     if (_playerInfo == null || _roomData == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
     
-    // teamIdを確実に文字列化
     var teamId = _playerInfo!['team'];
-    String teamIdStr;
-    
-    if (teamId is int) {
-      teamIdStr = teamId.toString();
-    } else if (teamId is String) {
-      teamIdStr = teamId;
-    } else {
-      teamIdStr = '0';
-    }
+    String teamIdStr = teamId is int ? teamId.toString() : teamId.toString();
     
     print('Player team ID: $teamId (type: ${teamId.runtimeType})');
     print('Team ID string: $teamIdStr');
@@ -300,39 +282,76 @@ Future<void> _submitWord() async {
     
     if (teamsData == null) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(child: Text('チームデータがありません', style: TextStyle(color: Colors.white))),
       );
     }
     
-    print('Teams data keys: ${teamsData.keys}');
+    print('Teams data type: ${teamsData.runtimeType}');
+    print('Teams data: $teamsData');
     
-    final teamDataRaw = teamsData[teamIdStr];
-    if (teamDataRaw == null) {
+    Map<String, dynamic> teamDataRaw;
+    if (teamsData is List) {
+      print('Teams is List, converting...');
+      if (teamId is int && teamId < teamsData.length) {
+        teamDataRaw = Map<String, dynamic>.from(teamsData[teamId] as Map);
+      } else {
+        return Scaffold(
+          body: Container(
+            color: const Color(0xFF2c3e50),
+            child: Center(
+              child: Text(
+                'チームデータが見つかりません (List)\nteamId: $teamId',
+                style: const TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        );
+      }
+    } else if (teamsData is Map) {
+      print('Teams is Map, keys: ${teamsData.keys}');
+      final rawData = teamsData[teamIdStr];
+      if (rawData == null) {
+        return Scaffold(
+          body: Container(
+            color: const Color(0xFF2c3e50),
+            child: Center(
+              child: Text(
+                'チームデータが見つかりません (Map)\nteamId: $teamIdStr\nkeys: ${teamsData.keys}',
+                style: const TextStyle(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        );
+      }
+      teamDataRaw = Map<String, dynamic>.from(rawData as Map);
+    } else {
       return Scaffold(
         body: Container(
           color: const Color(0xFF2c3e50),
           child: Center(
             child: Text(
-              'チームデータが見つかりません\nteamId: $teamIdStr\nteams keys: ${teamsData.keys}',
+              'チームデータの型が不正: ${teamsData.runtimeType}',
               style: const TextStyle(color: Colors.white),
-              textAlign: TextAlign.center,
             ),
           ),
         ),
       );
     }
     
-    final teamData = Map<String, dynamic>.from(teamDataRaw as Map);
-    final blocksData = teamData['blocks'];
+    final blocksData = teamDataRaw['blocks'];
     final blocks = blocksData != null
         ? List<Map<String, dynamic>>.from(
             (blocksData as List).map((e) => Map<String, dynamic>.from(e as Map))
           )
         : <Map<String, dynamic>>[];
-    final height = teamData['height'] ?? 0;
-    final teamName = teamData['name'] ?? 'チーム${int.tryParse(teamIdStr) ?? 0 + 1}';
+    final height = teamDataRaw['height'] ?? 0;
+    final teamName = teamDataRaw['name'] ?? 'チーム${teamId + 1}';
     final themeChar = _roomData!['theme']?['char'] ?? '';
-    final themeDetail = _roomData!['theme']?['detail'] ?? '';    return Scaffold(
+    final themeDetail = _roomData!['theme']?['detail'] ?? '';
+    
+    return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           color: Color(0xFF2c3e50),
