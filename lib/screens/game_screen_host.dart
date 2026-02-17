@@ -175,7 +175,7 @@ class _GameScreenHostState extends State<GameScreenHost> {
     );
   }
 
- Widget _buildGameScreen() {
+Widget _buildGameScreen() {
     if (_roomData == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: Colors.white)),
@@ -187,7 +187,7 @@ class _GameScreenHostState extends State<GameScreenHost> {
     final themeChar = _roomData!['theme']?['char'] ?? '';
     final themeDetail = _roomData!['theme']?['detail'] ?? '';
     
-    if (teamsData == null || teamsData is! Map) {
+    if (teamsData == null) {
       return Scaffold(
         body: Container(
           color: const Color(0xFF2c3e50),
@@ -201,9 +201,8 @@ class _GameScreenHostState extends State<GameScreenHost> {
       );
     }
     
-    // teamsDataのキーをすべて文字列として取得
-    print('Teams data keys: ${teamsData.keys}');
-    print('Teams data: $teamsData');
+    print('Host - Teams data type: ${teamsData.runtimeType}');
+    print('Host - Teams data: $teamsData');
     
     return Scaffold(
       body: Container(
@@ -213,7 +212,6 @@ class _GameScreenHostState extends State<GameScreenHost> {
         child: SafeArea(
           child: Column(
             children: [
-              // ヘッダー
               Container(
                 padding: const EdgeInsets.all(12),
                 color: const Color(0xFF34495e),
@@ -239,7 +237,6 @@ class _GameScreenHostState extends State<GameScreenHost> {
                 ),
               ),
               
-              // チームボックス
               Expanded(
                 child: GridView.builder(
                   padding: const EdgeInsets.all(8),
@@ -251,37 +248,46 @@ class _GameScreenHostState extends State<GameScreenHost> {
                   ),
                   itemCount: numTeams,
                   itemBuilder: (context, index) {
-                    final teamIdStr = index.toString();  // ← 文字列に変換
-                    print('Looking for team: $teamIdStr');
+                    Map<String, dynamic> teamData;
                     
-                    final teamDataRaw = teamsData[teamIdStr];  // ← 文字列を使用
-                    
-                    if (teamDataRaw == null) {
-                      print('Team $teamIdStr not found');
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'チーム${index + 1}\n読み込み中',
-                            style: const TextStyle(color: Colors.white),
-                            textAlign: TextAlign.center,
+                    // ListまたはMap対応
+                    if (teamsData is List) {
+                      if (index < teamsData.length) {
+                        teamData = Map<String, dynamic>.from(teamsData[index] as Map);
+                      } else {
+                        return Container();
+                      }
+                    } else if (teamsData is Map) {
+                      final teamIdStr = index.toString();
+                      final rawData = teamsData[teamIdStr];
+                      if (rawData == null) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ),
-                      );
+                          child: Center(
+                            child: Text(
+                              'チーム${index + 1}\n読み込み中',
+                              style: const TextStyle(color: Colors.white),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        );
+                      }
+                      teamData = Map<String, dynamic>.from(rawData as Map);
+                    } else {
+                      return Container();
                     }
                     
-                    final team = Map<String, dynamic>.from(teamDataRaw as Map);
-                    final teamName = team['name'] ?? 'チーム${index + 1}';
-                    final blocksData = team['blocks'];
+                    final teamName = teamData['name'] ?? 'チーム${index + 1}';
+                    final blocksData = teamData['blocks'];
                     final blocks = blocksData != null 
                         ? List<Map<String, dynamic>>.from(
                             (blocksData as List).map((e) => Map<String, dynamic>.from(e as Map))
                           )
                         : <Map<String, dynamic>>[];
-                    final height = team['height'] ?? 0;
+                    final height = teamData['height'] ?? 0;
                     
                     return _buildTeamBox(teamName, blocks, height, index);
                   },
